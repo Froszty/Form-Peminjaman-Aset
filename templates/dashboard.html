@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard Peminjaman</h2>
+
+{% if rows|length == 0 %}
+  <p>Tidak ada peminjaman aktif.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Device</th>
+      <th>Peminjam</th>
+      <th>Divisi</th>
+      <th>Mulai</th>
+      <th>Durasi (hari)</th>
+      <th>Jatuh Tempo</th>
+      <th>Sisa Waktu</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>#{{ r.form_seq or r.id }}</td>
+      <td>{{ r.device_code }}</td>
+      <td>{{ r.borrower_name }}</td>
+      <td>{{ r.borrower_division }}</td>
+      <td>{{ r.start_date }}</td>
+      <td>{{ r.duration_days }}</td>
+      <td>{{ r|end_date }}</td>
+      <td><span class="badge">{{ r|remaining_str }}</span></td>
+      <td>
+        <a class="btn btn-primary btn-tall" href="{{ url_for('return_form', loan_id=r.id) }}">
+          <span>Isi Form</span>
+          <span>Pengembalian</span>
+        </a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

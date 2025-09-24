@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block head_extra %}
+<style>
+  /* ===== Khusus halaman History: horizontal slider + paksa tetap tabel di mobile ===== */
+
+  /* Bungkus tabel agar scroll hanya di area ini (horizontal) */
+  .history-scroll-x{
+    width: 100%;
+    overflow-x: auto;      /* <-- horizontal slider */
+    overflow-y: hidden;    /* tidak ikut vertical */
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: var(--shadow);
+  }
+
+  /* Tabel dibuat lebih lebar dari container agar scrollbar muncul */
+  .history-table{
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1400px;     /* paksa lebar minimum (bisa disesuaikan) */
+  }
+
+  /* Header & isi */
+  .history-table thead th{
+    background:#fff5f6;
+    color:#9b0a14;
+    text-align:left;
+    padding:12px 14px;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .history-table tbody td{
+    padding:12px 14px;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    vertical-align:middle;
+  }
+  .history-table tbody tr:hover{ background:#fffafa; }
+  .history-table tbody tr:last-child td{ border-bottom:none; }
+
+  /* Override aturan global base.html yang mengubah tabel jadi kartu di layar kecil */
+  @media (max-width: 640px){
+    .history-table thead{ display: table-header-group !important; }
+    .history-table{ display: table !important; }
+    .history-table tbody{ display: table-row-group !important; }
+    .history-table tr{ display: table-row !important; }
+    .history-table td, .history-table th{ display: table-cell !important; }
+    .history-table td::before{ content: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>History Peminjaman</h2>
+<p class="muted">Filter berdasarkan bulan &amp; tahun untuk menarik report ke excel.</p>
+
+<form method="get" action="{{ url_for('history') }}" class="row grid-3" style="align-items:end; margin-bottom:12px;">
+  <div>
+    <label for="bulan">Bulan</label>
+    <select id="bulan" name="bulan" required>
+      {% for i,name in months %}
+        <option value="{{ i }}" {% if i == bulan %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label for="tahun">Tahun</label>
+    <input id="tahun" type="number" name="tahun" min="2000" max="2100" value="{{ tahun }}" required>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button class="btn btn-primary" type="submit" name="applied" value="1">Filter</button>
+
+    {# Export hanya muncul kalau filter sudah diterapkan #}
+    {% if applied %}
+      <a
+        class="btn btn-outline"
+        href="{{ url_for('export_history', bulan=bulan, tahun=tahun) }}"
+        title="Export ke Excel (sesuai filter)"
+      >Export Excel</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if rows|length == 0 %}
+  <p>Tidak ada data pada periode ini.</p>
+{% else %}
+
+  <div class="history-scroll-x">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Tanggal Form</th>
+          <th>Device</th>
+          <th>Durasi (hari)</th>
+          <th>Peminjam</th>
+          <th>Divisi</th>
+          <th>Mulai</th>
+          <th>Konfirmasi Peminjaman Oleh</th>
+          <th>Dikembalikan Oleh</th>
+          <th>Divisi Pengembali</th>
+          <th>Tanggal dikembalikan</th>
+          <th>Konfirmasi Pengembalian Oleh</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ r.created_at.split(" ")[0] if r.created_at }}</td>
+          <td>{{ r.device_code }}</td>
+          <td>{{ r.duration_days }}</td>
+          <td>{{ r.borrower_name }}</td>
+          <td>{{ r.borrower_division }}</td>
+          <td>{{ r.start_date }}</td>
+          <td>{{ r.it_confirmed_by or "-" }}</td>
+          <td>{{ r.return_borrower_name or "-" }}</td>
+          <td>{{ r.return_division or "-" }}</td>
+          <td>{{ r.return_submitted_at or "-" }}</td>
+          <td>{{ r.return_it_confirmed_by or "-" }}</td>
+          <td>{{ r.status }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if applied %}
+    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+      <a
+        class="btn btn-primary"
+        href="{{ url_for('export_history', bulan=bulan, tahun=tahun) }}"
+        title="Export Excel periode ini"
+      >Export Excel</a>
+      <a class="btn btn-outline" href="{{ url_for('history') }}">Reset Filter</a>
+    </div>
+  {% else %}
+    <div style="margin-top:12px;">
+      <a class="btn btn-outline" href="{{ url_for('history') }}">Reset Filter</a>
+    </div>
+  {% endif %}
+
+{% endif %}
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<style>
+  /* Frame tanda tangan kecil: sama seperti halaman lain */
+  .sig-wrap.sig-sm{
+    display:inline-block;
+    border-radius:14px; padding:8px; background:#fff;
+    box-shadow:
+      0 0 0 2px #fce0e3 inset,
+      0 10px 30px rgba(184,0,14,.10),
+      0 0 34px rgba(184,0,14,.14);
+  }
+  /* Ukuran kanvas 5:4 – sama */
+  .sig-45 .sig-canvas{
+    width:300px; height:240px; display:block; max-width:100%;
+    background:#fff; border:1px solid var(--border); border-radius:12px;
+    touch-action:none;        /* penting untuk mobile */
+  }
+  @media (max-width:420px){
+    .sig-45 .sig-canvas{ width:260px; height:208px; }
+  }
+  .sig-tools{ margin-top:8px; display:flex; gap:10px; align-items:center; }
+  .sig-tools .btn{ padding:8px 12px; }
+
+  /* Checkbox + teks dalam SATU baris rapi */
+  .legal-line{
+    margin-top:8px;
+    display:flex; gap:10px; align-items:center; /* satu garis tengah */
+    text-align:left;
+    max-width:900px;
+  }
+  .legal-line input[type="checkbox"]{
+    flex:0 0 auto; margin:0;
+    width:18px; height:18px;
+  }
+  .legal-line label{
+    margin:0; color:var(--text); font-size:14px; line-height:1.35;
+  }
+
+  /* Merapikan tata letak radio button */
+  .condition-options {
+    display: flex;
+    gap: 10px; /* Mengurangi jarak antar elemen */
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .condition-options label {
+    margin-top: 0;
+  }
+  .condition-options input[type="radio"] {
+    /* Mengurangi ukuran tombol radio */
+    width: 15px;
+    height: 15px;
+  }
+  .info-box {
+    background-color: #f0f4f8;
+    border: 1px solid #dbe1e6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Konfirmasi Pengembalian IT</h2>
+<p class="muted">Form #{{ row.id }} • Device: <strong>{{ row.device_code }}</strong></p>
+
+<div class="row grid-2">
+  <div><label>Nama PIC IT Penerima</label><input type="text" value="{{ it_user }}" readonly></div>
+  <div><label>Pengembali</label><input type="text" value="{{ row.return_borrower_name }} ({{ row.return_division }})" readonly></div>
+</div>
+
+<form method="post" onsubmit="return prepareSignature();" style="margin-top:16px;">
+  
+  <div class="info-box">
+    <h3 style="margin-top: 0;">Kondisi Barang Saat Peminjaman</h3>
+    <p>
+      <strong>Status:</strong> {{ row.status_kondisi or 'Tidak ada data' }}
+      {% if row.status_kondisi == 'Rusak' and row.keterangan_kondisi %}
+        <br><strong>Keterangan:</strong> {{ row.keterangan_kondisi }}
+      {% endif %}
+    </p>
+  </div>
+
+  <div style="margin-top:16px;">
+    <h3>Kondisi Barang Saat Pengembalian</h3>
+    <div class="condition-options">
+      <input type="radio" id="kondisi_baik_return" name="return_status_kondisi" value="Baik" checked required>
+      <label for="kondisi_baik_return">Sesuai kondisi saat peminjaman</label>
+      <input type="radio" id="kondisi_rusak_return" name="return_status_kondisi" value="Rusak" required>
+      <label for="kondisi_rusak_return">Rusak</label>
+    </div>
+    <div id="keterangan_rusak_return_container" style="display:none; margin-top: 10px;">
+      <label for="keterangan_rusak_return">Keterangan Kerusakan</label>
+      <textarea id="keterangan_rusak_return" name="return_keterangan_kondisi" rows="3"></textarea>
+    </div>
+  </div>
+
+  <div class="legal-line">
+    <input type="checkbox" name="checked_ack" id="checked_ack">
+    <label for="checked_ack">{{ LEGAL_TEXT }}</label>
+  </div>
+
+  <div style="margin-top:16px;">
+    <h3>Tanda tangan PIC IT</h3>
+    <div class="sig-wrap sig-sm sig-45">
+      <canvas id="sigCanvas" class="sig-canvas"></canvas>
+      <div class="sig-tools">
+        <button type="button" class="btn btn-outline" onclick="clearSig()">Bersihkan</button>
+      </div>
+    </div>
+    <input type="hidden" name="signature_data" id="signature_data">
+  </div>
+
+  <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-primary" type="submit">Konfirmasi</button>
+    <a class="btn btn-outline" href="{{ url_for('returns_list') }}">Batal</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  const canvas = document.getElementById('sigCanvas');
+  const hidden = document.getElementById('signature_data');
+  const ctx = canvas.getContext('2d');
+  let drawing=false, last=null, dirty=false;
+
+  // Menambahkan listener untuk radio button
+  document.querySelectorAll('input[name="return_status_kondisi"]').forEach(radio => {
+    radio.addEventListener('change', toggleKeterangan);
+  });
+
+  function toggleKeterangan() {
+    const isRusak = document.getElementById('kondisi_rusak_return').checked;
+    const container = document.getElementById('keterangan_rusak_return_container');
+    const textarea = document.getElementById('keterangan_rusak_return');
+    if (isRusak) {
+      container.style.display = 'block';
+      textarea.required = true;
+    } else {
+      container.style.display = 'none';
+      textarea.required = false;
+      textarea.value = ''; // Mengosongkan isian jika 'Baik' dipilih
+    }
+  }
+  toggleKeterangan(); // Panggil saat memuat halaman
+
+  function setSize(){
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const cssW = Math.floor(canvas.clientWidth || 300);
+    const cssH = Math.floor(canvas.clientHeight || 240);
+    canvas.width  = Math.floor(cssW * ratio);
+    canvas.height = Math.floor(cssH * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle='#111';
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  setSize(); window.addEventListener('resize', setSize);
+
+  function pos(e){
+    const r=canvas.getBoundingClientRect();
+    if(e.touches&&e.touches.length){return {x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};}
+    return {x:e.clientX-r.left,y:e.clientY-r.top};
+  }
+  function start(e){drawing=true; last=pos(e); e.preventDefault();}
+  function end(e){drawing=false; last=null; e.preventDefault();}
+  function move(e){
+    if(!drawing) return; const p=pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke();
+    last=p; dirty=true; e.preventDefault();
+  }
+
+  // Event binding – SAMA seperti halaman lain
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end,{passive:false});
+  canvas.addEventListener('touchcancel',end,{passive:false});
+
+  window.clearSig=function(){ setSize(); dirty=false; };
+  window.prepareSignature=function(){
+    const isRusak = document.getElementById('kondisi_rusak_return').checked;
+    const keterangan = document.getElementById('keterangan_rusak_return');
+    if (isRusak && keterangan.required && keterangan.value.trim() === '') {
+        alert("Keterangan kondisi barang rusak wajib diisi.");
+        return false;
+    }
+    if(!document.getElementById('checked_ack').checked){
+      alert("Checkbox pernyataan wajib dicentang."); return false;
+    }
+    if(!dirty){ alert("Mohon isi tanda tangan PIC IT."); return false; }
+    hidden.value = canvas.toDataURL('image/png'); return true;
+  };
+})();
+</script>
+{% endblock %}
+

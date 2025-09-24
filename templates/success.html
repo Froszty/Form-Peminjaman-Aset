@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Success</h2>
+<p>{{ message }}</p>
+<div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+  <a class="btn btn-primary" href="{{ url_for('dashboard') }}">Kembali ke Dashboard</a>
+  <a class="btn btn-outline" href="{{ url_for('create_form') }}">Create Form Baru</a>
+
+  {% if session.get('is_it') %}
+    <a class="btn btn-outline" href="{{ url_for('submitted_list') }}">Submitted Queue</a>
+    <a class="btn btn-outline" href="{{ url_for('returns_list') }}">Return Queue</a>
+  {% endif %}
+</div>
+{% endblock %}

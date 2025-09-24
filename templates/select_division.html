@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Pilih Divisi</h2>
+<p class="muted">Selamat datang! Anda terdeteksi baru login pertama kali di aplikasi ini. Silakan pilih divisi Anda (Ini hanya dilakukan sekali)</p>
+<form method="post" autocomplete="off" style="max-width:480px">
+  <label>Divisi</label>
+  <select name="division" required>
+    <option value="">— Pilih Divisi —</option>
+    {% for d in divisions %}
+      <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+  </select>
+  <div style="margin-top:12px; display:flex; gap:10px;">
+    <button class="btn btn-primary" type="submit">Simpan</button>
+  </div>
+</form>
+{% endblock %}

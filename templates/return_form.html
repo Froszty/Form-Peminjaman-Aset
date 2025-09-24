@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<style>
+  .sig-wrap.sig-sm{
+    display:inline-block;
+    border-radius:14px; padding:8px; background:#fff;
+    box-shadow:
+      0 0 0 2px #fce0e3 inset,
+      0 10px 30px rgba(184,0,14,.10),
+      0 0 34px rgba(184,0,14,.14);
+  }
+  .sig-45 .sig-canvas{ width:300px; height:240px; display:block; max-width:100%; }
+  @media (max-width:420px){ .sig-45 .sig-canvas{ width:260px; height:208px; } }
+  .sig-tools{ margin-top:8px; display:flex; gap:10px; align-items:center; }
+  .sig-tools .btn{ padding:8px 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<h2>Form Pengembalian</h2>
+<p class="muted">Server time: <strong>{{ server_now }}</strong></p>
+
+<div class="row grid-2">
+  <div><label>ID Form</label><input type="text" value="#{{ row.id }}" readonly></div>
+  <div><label>Device</label><input type="text" value="{{ row.device_code }}" readonly></div>
+  <div><label>Peminjam</label><input type="text" value="{{ row.borrower_name }} ({{ row.borrower_division }})" readonly></div>
+  <div><label>Tgl Mulai & Durasi</label><input type="text" value="{{ row.start_date }} • {{ row.duration_days }} hari" readonly></div>
+</div>
+
+<form method="post" onsubmit="return prepareSignature();" style="margin-top:16px;">
+  <div class="row grid-2">
+    <div>
+      <label>Nama Pengembali</label>
+      <input type="text" name="return_borrower_name" value="{{ session.get('display_name') or session.get('username') }}" required>
+    </div>
+    <div>
+      <label>Divisi Pengembali</label>
+      <select name="return_division" required>
+        <option value="">— Pilih Divisi —</option>
+        {% for d in divisions %}
+          <option value="{{ d }}" 
+            {% if session.get('is_it') and d == 'IT' %}
+              selected
+            {% elif not session.get('is_it') and d == session.get('user_division') %}
+              selected
+            {% endif %}>
+            {{ d }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <h3>Tanda tangan Pengembali & Tanggal</h3>
+    <div class="sig-wrap sig-sm sig-45">
+      <canvas id="sigCanvas" class="sig-canvas"></canvas>
+      <div class="sig-tools">
+        <button type="button" class="btn btn-outline" onclick="clearSig()">Bersihkan</button>
+      </div>
+    </div>
+    <input type="hidden" name="signature_data" id="signature_data">
+  </div>
+
+  <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-primary" type="submit">Submit Pengembalian</button>
+    <a class="btn btn-outline" href="{{ url_for('return_active_list') }}">Kembali</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  const canvas = document.getElementById('sigCanvas');
+  const hidden = document.getElementById('signature_data');
+  const ctx = canvas.getContext('2d');
+  let drawing=false, last=null, dirty=false;
+
+  function setSize(){
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const cssW = Math.floor(canvas.clientWidth || 300);
+    const cssH = Math.floor(canvas.clientHeight || 240);
+    canvas.width  = Math.floor(cssW * ratio);
+    canvas.height = Math.floor(cssH * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2; ctx.lineJoin='round'; ctx.lineCap='round'; ctx.strokeStyle='#111';
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  setSize(); window.addEventListener('resize', setSize);
+
+  function pos(e){ const r=canvas.getBoundingClientRect();
+    if(e.touches&&e.touches.length){return {x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};}
+    return {x:e.clientX-r.left,y:e.clientY-r.top};
+  }
+  function start(e){drawing=true; last=pos(e); e.preventDefault();}
+  function end(e){drawing=false; last=null; e.preventDefault();}
+  function move(e){ if(!drawing) return; const p=pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; dirty=true; e.preventDefault();
+  }
+  canvas.addEventListener('mousedown',start);
+  canvas.addEventListener('mousemove',move);
+  window.addEventListener('mouseup',end);
+  canvas.addEventListener('touchstart',start,{passive:false});
+  canvas.addEventListener('touchmove',move,{passive:false});
+  canvas.addEventListener('touchend',end,{passive:false});
+
+  window.clearSig=function(){ setSize(); dirty=false; };
+  window.prepareSignature=function(){
+    if(!dirty){ alert("Mohon isi tanda tangan pengembali."); return false; }
+    hidden.value = canvas.toDataURL('image/png'); return true;
+  };
+})();
+</script>
+{% endblock %}
+

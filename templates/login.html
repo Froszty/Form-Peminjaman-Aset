@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Login</h2>
+<p class="muted">Masukkan user AD anda</p>
+<form method="post" autocomplete="off">
+  <label>Username</label>
+  <input type="text" name="username" required autofocus>
+  <label>Password</label>
+  <input type="password" name="password" required>
+  <div style="margin-top:12px; display:flex; gap:10px;">
+    <button class="btn btn-primary" type="submit">Login</button>
+  </div>
+</form>
+{% endblock %}

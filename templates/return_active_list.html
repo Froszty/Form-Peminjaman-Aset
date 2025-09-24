@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Return Form — Pilih Peminjaman Aktif</h2>
+<p class="muted">Peminjam mengisi form pengembalian dari daftar berikut.</p>
+
+{% if rows|length == 0 %}
+  <p>Tidak ada peminjaman aktif.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Device</th>
+      <th>Peminjam</th>
+      <th>Divisi</th>
+      <th>Mulai</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>#{{ r.id }}</td>
+      <td>{{ r.device_code }}</td>
+      <td>{{ r.borrower_name }}</td>
+      <td>{{ r.borrower_division }}</td>
+      <td>{{ r.start_date }}</td>
+      <td><a class="btn btn-primary" href="{{ url_for('return_form', loan_id=r.id) }}">Isi Form Pengembalian</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

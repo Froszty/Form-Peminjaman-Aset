@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Antrian Pengembalian — Menunggu Konfirmasi IT</h2>
+<p class="muted">Daftar pengembalian yang menunggu konfirmasi IT.</p>
+
+{% if rows|length == 0 %}
+  <p>Tidak ada form pengembalian yang menunggu.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Device</th>
+      <th>Pengembali</th>
+      <th>Divisi</th>
+      <th>Diajukan (Return)</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>#{{ r.id }}</td>
+      <td>{{ r.device_code }}</td>
+      <td>{{ r.return_borrower_name }}</td>
+      <td>{{ r.return_division }}</td>
+      <td>{{ r.return_submitted_at }}</td>
+      <td><a class="btn btn-primary btn-sm" href="{{ url_for('confirm_return_it', loan_id=r.id) }}">Ambil Tiket Pengembalian</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

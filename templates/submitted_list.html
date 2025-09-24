@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Antrian Peminjaman — Menunggu Konfirmasi IT</h2>
+<p class="muted">Daftar pinjaman yang menunggu konfirmasi IT.</p>
+
+{% if rows|length == 0 %}
+  <p>Tidak ada data.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Device</th>
+      <th>Peminjam</th>
+      <th>Divisi</th>
+      <th>Mulai</th>
+      <th>Durasi</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>#{{ r.form_seq or r.id }}</td>
+      <td>{{ r.device_code }}</td>
+      <td>{{ r.borrower_name }}</td>
+      <td>{{ r.borrower_division }}</td>
+      <td>{{ r.start_date }}</td>
+      <td>{{ r.duration_days }} hari</td>
+      <td><a class="btn btn-primary btn-sm" href="{{ url_for('confirm_it', loan_id=r.id) }}">Ambil Tiket</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
